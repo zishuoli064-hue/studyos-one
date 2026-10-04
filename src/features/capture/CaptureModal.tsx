@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { useApp } from '../../app/context'
 import { db } from '../../storage/db'
 import type { Mistake, Word } from '../../domain/types'
+import { localDay } from '../../domain/date'
 
 type CaptureKind = 'task' | 'word' | 'mistake' | 'note'
 
@@ -38,7 +39,7 @@ export function CaptureModal({ onClose }: { onClose: () => void }) {
       const mistake: Mistake = { id: crypto.randomUUID(), subjectId: effectiveSubject.id, topic: '',
         title: name, problem: detail.trim(), myError: '', correctMethod: '', keyInsight: '',
         difficulty: 3, errorType: 'unknown', createdAt: now, mastery: 0, reviewCount: 0,
-        mastered: false, nextReviewAt: now.slice(0, 10) }
+        mastered: false, nextReviewAt: localDay(new Date(now)) }
       await db.mistakes.add(mistake)
     } else await db.notes.add({ id: crypto.randomUUID(), text: `${name}${detail.trim() ? `\n${detail.trim()}` : ''}`, createdAt: now })
     onClose()

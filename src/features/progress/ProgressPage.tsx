@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ChartNoAxesCombined } from 'lucide-react'
 import { useApp } from '../../app/context'
 import { duration, localDay } from '../../app/utils'
+import { calculateWeeklyReview } from '../../domain/weekly'
 
 type Range = 'today' | '7 days' | '30 days'
 const daysAgo = (days: number) => { const date = new Date(); date.setDate(date.getDate() - days); return localDay(date) }
@@ -30,22 +31,12 @@ export function ProgressPage() {
     .reduce((sum, session) => sum + session.minutes, 0) }))
   const maxDaily = Math.max(1, ...daily.map(day => day.minutes))
 
-  const weekSince = daysAgo(6)
-  const weekSessions = data.sessions.filter(session => localDay(new Date(session.createdAt)) >= weekSince)
-  const weekMinutes = weekSessions.reduce((sum, session) => sum + session.minutes, 0)
-  const weekQuiz = data.quizResults.filter(result => localDay(new Date(result.createdAt)) >= weekSince)
-  const weekAccuracy = weekQuiz.length ? Math.round(weekQuiz.filter(result => result.correct).length / weekQuiz.length * 100) : null
-  const weekCompleted = data.tasks.filter(task => task.completedAt && localDay(new Date(task.completedAt)) >= weekSince).length
-  const weekScheduled = data.tasks.filter(task => task.createdAt.slice(0, 10) <= localDay()).length
-  const weakWords = data.words.filter(word => word.language === 'en' && word.errorCount > 0)
-    .sort((a, b) => b.errorCount - a.errorCount).slice(0, 3)
-  const mathTypes = Object.entries(data.mistakes.filter(mistake => mathIds.has(mistake.subjectId))
-    .reduce<Record<string, number>>((acc, mistake) => ({ ...acc, [mistake.errorType]: (acc[mistake.errorType] ?? 0) + 1 }), {}))
-  const germanWords = data.words.filter(word => germanIds.has(word.subjectId)).length
+  const week = calculateWeeklyReview(data, localDay())
   const suggestions = [
-    weekAccuracy !== null && weekAccuracy < 75 ? 'Vocabulary accuracy was below 75%. Revisit weak words before adding another full list.' : '',
-    weekMinutes < (data.settings?.dailyMinutes ?? 120) * 3 ? 'This week was lighter. A smaller daily plan may be easier to finish.' : '',
-    data.tasks.some(task => /listening/i.test(task.title)) && !weekSessions.some(session => data.tasks.some(task => task.id === session.taskId && /listening/i.test(task.title)))
+    week.quizAccuracy !== null && week.quizAccuracy < 75 ? 'Vocabulary accuracy was below 75%. Revisit weak words before adding another full list.' : '',
+    week.minutes < (data.settings?.dailyMinutes ?? 120) * 3 ? 'This week was lighter. A smaller daily plan may be easier to finish.' : '',
+    data.tasks.some(task => /listening/i.test(task.title)) && !data.sessions.filter(session => localDay(new Date(session.createdAt)) >= week.since)
+      .some(session => data.tasks.some(task => task.id === session.taskId && /listening/i.test(task.title)))
       ? 'Listening has not appeared in your study logs this week. Consider a short session next week.' : '',
   ].filter(Boolean)
 
@@ -73,13 +64,13 @@ export function ProgressPage() {
           <div className="progress-track"><span style={{ width: `${item.minutes / Math.max(1, minutes) * 100}%` }}/></div></div>) :
           <p className="muted">Log a session to see your subject mix.</p>}</section></div>
     <section className="panel weekly-panel"><div className="eyebrow">YOUR WEEKLY REVIEW</div><h2>Last 7 days</h2>
-      <div className="weekly-grid"><div><span>Study time</span><strong>{duration(weekMinutes)}</strong></div>
-        <div><span>Tasks completed</span><strong>{weekCompleted}</strong></div>
-        <div><span>Vocabulary accuracy</span><strong>{weekAccuracy === null ? 'No quiz yet' : `${weekAccuracy}%`}</strong></div>
-        <div><span>Plan completion</span><strong>{weekScheduled ? `${Math.round(weekCompleted / weekScheduled * 100)}%` : '—'}</strong></div>
-        <div><span>German vocabulary</span><strong>{germanWords} words</strong></div>
-        <div><span>Math error types</span><strong>{mathTypes.length ? mathTypes.map(([kind, count]) => `${kind} ${count}`).join(' · ') : 'None'}</strong></div></div>
-      {weakWords.length > 0 && <p><strong>Words to revisit:</strong> {weakWords.map(word => word.word).join(' · ')}</p>}
+      <div className="weekly-grid"><div><span>Study time</span><strong>{duration(week.minutes)}</strong></div>
+        <div><span>Tasks completed</span><strong>{week.completedTasks}</strong></div>
+        <div><span>Vocabulary accuracy</span><strong>{week.quizAccuracy === null ? 'No quiz yet' : `${week.quizAccuracy}%`}</strong></div>
+        <div><span>Plan completion</span><strong>{week.planCompletion === null ? 'No plan saved' : `${week.planCompletion}% of ${week.plannedTasks} tasks`}</strong></div>
+        <div><span>German vocabulary</span><strong>{week.germanWords} words · {duration(week.germanMinutes)}</strong></div>
+        <div><span>Math error types</span><strong>{Object.keys(week.mathErrorTypes).length ? Object.entries(week.mathErrorTypes).map(([kind, count]) => `${kind} ${count}`).join(' · ') : 'None'}</strong></div></div>
+      {week.weakWords.length > 0 && <p><strong>Words to revisit:</strong> {week.weakWords.map(word => word.word).join(' · ')}</p>}
       <div className="week-adjust"><strong>Next week adjustment</strong><p>{suggestions[0] || 'Keep the rhythm that fits your schedule. Your unfinished tasks will remain ready.'}</p></div></section>
   </div>
 }

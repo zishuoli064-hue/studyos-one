@@ -29,7 +29,8 @@ export function previewVocabularyCsv(csv: string, existing: Word[], subjectId = 
   const index = (name: string) => keys.indexOf(name.toLowerCase())
   if (index('word') < 0) throw new Error('CSV requires a Word column')
   const valid: Word[] = [], invalid: CsvPreview['invalid'] = [], duplicates: string[] = []
-  const seen = new Set(existing.filter(word => word.language === language).map(word => word.word.trim().toLocaleLowerCase()))
+  const seen = new Set(existing.filter(word => word.language === language && word.subjectId === subjectId)
+    .map(word => word.word.trim().toLocaleLowerCase()))
   for (let i = 1; i < rows.length; i++) {
     const get = (key: string) => (rows[i][index(key)] || '').trim()
     const spelling = get('word')
@@ -48,7 +49,7 @@ export function previewVocabularyCsv(csv: string, existing: Word[], subjectId = 
 export function mergeVocabulary(existing: Word[], incoming: Word[], strategy: DuplicateStrategy): Word[] {
   const output = [...existing]
   for (const word of incoming) {
-    const index = output.findIndex(current => current.language === word.language &&
+    const index = output.findIndex(current => current.language === word.language && current.subjectId === word.subjectId &&
       current.word.trim().toLocaleLowerCase() === word.word.trim().toLocaleLowerCase())
     if (index < 0) output.push(word)
     else if (strategy === 'replace') output[index] = { ...word, id: output[index].id }

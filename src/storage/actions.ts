@@ -8,6 +8,7 @@ export async function deleteSubject(store: StudyStore, subjectId: string): Promi
   const data = await readSnapshot(store)
   const wordIds = new Set(data.words.filter(word => word.subjectId === subjectId).map(word => word.id))
   const listIds = new Set(data.lists.filter(list => list.subjectId === subjectId).map(list => list.id))
+  const taskIds = new Set(data.tasks.filter(task => task.subjectId === subjectId).map(task => task.id))
   const removed: Partial<Snapshot> = {
     subjects: data.subjects.filter(subject => subject.id === subjectId),
     tasks: data.tasks.filter(task => task.subjectId === subjectId),
@@ -19,6 +20,7 @@ export async function deleteSubject(store: StudyStore, subjectId: string): Promi
     sessions: data.sessions.filter(session => session.subjectId === subjectId),
     quizResults: data.quizResults.filter(result => listIds.has(result.listId) || wordIds.has(result.wordId)),
     notes: [],
+    plans: data.plans.filter(plan => plan.taskIds.some(id => taskIds.has(id))),
   }
   if (!removed.subjects?.length) throw new Error('Subject no longer exists')
   await store.transaction('rw', store.tables, async () => {
@@ -26,6 +28,8 @@ export async function deleteSubject(store: StudyStore, subjectId: string): Promi
       const ids = (removed[key] as { id: string }[] | undefined)?.map(item => item.id) ?? []
       if (ids.length) await store[key].bulkDelete(ids)
     }
+    if (removed.plans?.length) await store.plans.bulkPut(removed.plans.map(plan => ({ ...plan,
+      taskIds: plan.taskIds.filter(id => !taskIds.has(id)) })))
   })
   return removed
 }
@@ -36,6 +40,7 @@ export async function restoreSubject(store: StudyStore, removed: Partial<Snapsho
       const rows = removed[key] as { id: string }[] | undefined
       if (rows?.length) await (store[key] as typeof store.subjects).bulkPut(rows as never)
     }
+    if (removed.plans?.length) await store.plans.bulkPut(removed.plans)
   })
 }
 

@@ -81,5 +81,5 @@ export function demoSnapshot(settings: AppSettings, now = new Date()): Snapshot 
     { id: 'demo-list-de-1', subjectId: 'demo-german', language: 'de', number: 1,
       wordIds: words.filter(word => word.language === 'de').map(word => word.id), status: 'new', createdAt },
   ]
-  return { subjects, tasks, exams, words, lists, mistakes, topics, sessions: [], quizResults: [], notes: [], settings }
+  return { subjects, tasks, exams, words, lists, mistakes, topics, sessions: [], quizResults: [], notes: [], plans: [], settings }
 }

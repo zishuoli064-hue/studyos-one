@@ -6,7 +6,7 @@ import { applyReview } from '../../domain/review'
 import { buildQuizQuestions, checkAnswer, scoreQuiz, type QuizAnswer } from '../../domain/quiz'
 import { db } from '../../storage/db'
 import { useApp } from '../../app/context'
-import { confirmDelete, duration } from '../../app/utils'
+import { confirmDelete, duration, localDay } from '../../app/utils'
 
 type View = 'lists' | 'study' | 'quiz' | 'results'
 
@@ -64,7 +64,7 @@ export function VocabularyView({ subject, inbox }: { subject: Subject; inbox: bo
   }
   const rateWord = (rating: 'forgot' | 'good') => current && void run(async () => {
     const result = applyReview({ mastery: current.mastery, errorCount: current.errorCount, reviewCount: current.reviewCount,
-      rating, now: new Date().toISOString().slice(0, 10), intervals: data.settings?.reviewIntervals })
+      rating, now: localDay(), intervals: data.settings?.reviewIntervals })
     await db.words.put({ ...current, ...result, status: 'learning' })
     if (index + 1 >= activeWords.length) { setIndex(0); setView('quiz') }
     else { setIndex(index + 1); setRevealed(false) }
@@ -83,7 +83,7 @@ export function VocabularyView({ subject, inbox }: { subject: Subject; inbox: bo
           const result = next.find(item => item.wordId === word.id)
           if (!result) return word
           const review = applyReview({ mastery: word.mastery, errorCount: word.errorCount, reviewCount: word.reviewCount,
-            rating: result.correct ? 'good' : 'forgot', now: timestamp.slice(0, 10), intervals: data.settings?.reviewIntervals })
+            rating: result.correct ? 'good' : 'forgot', now: localDay(new Date(timestamp)), intervals: data.settings?.reviewIntervals })
           return { ...word, ...review, personalWeak: result.correct ? word.personalWeak : true,
             weakHistory: word.weakHistory + (result.correct ? 0 : 1) }
         }))

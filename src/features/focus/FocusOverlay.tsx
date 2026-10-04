@@ -5,17 +5,17 @@ import { db } from '../../storage/db'
 import { completeTask } from '../../storage/actions'
 import { useApp } from '../../app/context'
 
-interface TimerState { accumulated: number; startedAt: number | null }
+interface TimerState { accumulated: number; startedAt: number | null; targetMinutes: 0 | 25 | 50 | 90 }
 const timerKey = (id: string) => `studyos-one-focus-${id}`
-const readTimer = (id: string): TimerState => {
+const readTimer = (id: string, defaultTimer: 0 | 25 | 50 | 90): TimerState => {
   try { const saved = JSON.parse(localStorage.getItem(timerKey(id)) || 'null') as TimerState | null
-    if (saved && Number.isFinite(saved.accumulated)) return saved } catch { /* ignore damaged timer state */ }
-  return { accumulated: 0, startedAt: Date.now() }
+    if (saved && Number.isFinite(saved.accumulated)) return { ...saved, targetMinutes: saved.targetMinutes ?? defaultTimer } } catch { /* ignore damaged timer state */ }
+  return { accumulated: 0, startedAt: Date.now(), targetMinutes: defaultTimer }
 }
 
 export function FocusOverlay({ task, onClose }: { task: Task; onClose: () => void }) {
   const { data, run, notify } = useApp()
-  const [timer, setTimer] = useState<TimerState>(() => readTimer(task.id))
+  const [timer, setTimer] = useState<TimerState>(() => readTimer(task.id, data.settings?.defaultTimer ?? 0))
   const [now, setNow] = useState(Date.now())
   const [finishing, setFinishing] = useState(false)
   const [actualMinutes, setActualMinutes] = useState<number | null>(null)
@@ -28,7 +28,7 @@ export function FocusOverlay({ task, onClose }: { task: Task; onClose: () => voi
   const seconds = Math.max(0, Math.floor((timer.accumulated + (timer.startedAt ? now - timer.startedAt : 0)) / 1000))
   const clock = `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds % 3600 / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
   const toggle = () => setTimer(previous => previous.startedAt ?
-    { accumulated: previous.accumulated + (Date.now() - previous.startedAt), startedAt: null } :
+    { ...previous, accumulated: previous.accumulated + (Date.now() - previous.startedAt), startedAt: null } :
     { ...previous, startedAt: Date.now() })
   const complete = () => {
     if (saving) return
@@ -46,6 +46,10 @@ export function FocusOverlay({ task, onClose }: { task: Task; onClose: () => voi
     <div className="focus-center"><div className="eyebrow">ONE THING AT A TIME</div><h1>{task.title}</h1>
       <p>{data.subjects.find(subject => subject.id === task.subjectId)?.name ?? 'Study'}</p>
       <div className="focus-clock" role="timer">{clock}</div>
+      {!finishing && <><div className="segmented focus-presets" role="group" aria-label="Focus timer">{([0, 25, 50, 90] as const).map(value =>
+        <button key={value} className={timer.targetMinutes === value ? 'active' : ''}
+          onClick={() => setTimer(previous => ({ ...previous, targetMinutes: value }))}>{value ? `${value} min` : 'Free'}</button>)}</div>
+        {timer.targetMinutes > 0 && <p className="focus-remaining">{Math.max(0, timer.targetMinutes - Math.floor(seconds / 60))} min remaining · finish when ready</p>}</>}
       {!finishing && <div className="focus-controls"><button onClick={toggle} className="button-quiet">
         {timer.startedAt ? <Pause size={19}/> : <Play size={19}/>} {timer.startedAt ? 'Pause' : 'Resume'}</button>
         <button className="button-primary" onClick={() => { setActualMinutes(Math.max(1, Math.round(seconds / 60))); setFinishing(true) }}>

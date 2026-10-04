@@ -2,6 +2,8 @@
 
 A private, installable learning workspace for English, German, math, courses, and projects.
 
+Built with React, TypeScript, Vite, Dexie/IndexedDB, and a service worker. The interface is designed for phones and scales to desktop.
+
 ## Start
 
 Requires Node.js 22 or newer.
@@ -19,6 +21,14 @@ Today builds a time-boxed plan from exams, importance, weakness, review need, de
 
 StudyOS ONE stores all data in this browser's IndexedDB. It works offline after the first visit. Different devices have separate data. Settings can export a full JSON backup, restore it on another device, and import vocabulary from CSV. Export a backup before clearing browser data or changing devices.
 
+## Project structure
+
+- `src/domain/` contains the planner, review rules, vocabulary, backup, and weekly summary calculations.
+- `src/storage/` owns IndexedDB and sample data.
+- `src/features/` contains the five pages and focused workflows.
+- `src/app/` contains navigation, shared context, and the error boundary.
+- `tests/` covers algorithms, backup, and storage transactions.
+
 ## Verify and build
 
 ```bash
@@ -27,7 +37,7 @@ npm run build
 npm run preview
 ```
 
-The existing Python/Streamlit StudyOS V1 project is separate and remains usable locally. This PWA is a new client application; it does not connect to the V1 Supabase database.
+The existing Python/Streamlit StudyOS V1 project is separate and remains usable locally. This PWA is a new client application; it does not connect to the V1 Supabase database. The public PWA opens without a password; its learning data is private to each browser profile.
 
 ## Hosting
 

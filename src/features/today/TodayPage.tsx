@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ArrowRight, Clock3, RotateCcw, MoreHorizontal } from 'lucide-react'
 import { planToday } from '../../domain/planner'
 import { db } from '../../storage/db'
@@ -18,8 +18,13 @@ export function TodayPage() {
   }, [data.sessions, data.subjects])
   const plan = useMemo(() => planToday({ tasks: data.tasks, exams: data.exams, availableMinutes: available,
     recentMinutesBySubject, weights: data.settings?.priorityWeights, today }), [data.tasks, data.exams, available, recentMinutesBySubject, data.settings?.priorityWeights, today])
-  const studied = data.sessions.filter(session => session.createdAt.slice(0, 10) === today).reduce((sum, session) => sum + session.minutes, 0)
-  const completed = data.tasks.filter(task => task.completedAt?.slice(0, 10) === today).length
+  useEffect(() => {
+    if (data.plans.some(saved => saved.id === today)) return
+    void db.plans.put({ id: today, taskIds: plan.items.map(item => item.taskId),
+      plannedMinutes: plan.totalMinutes, savedAt: new Date().toISOString() })
+  }, [data.plans, plan.items, plan.totalMinutes, today])
+  const studied = data.sessions.filter(session => localDay(new Date(session.createdAt)) === today).reduce((sum, session) => sum + session.minutes, 0)
+  const completed = data.tasks.filter(task => task.completedAt && localDay(new Date(task.completedAt)) === today).length
   const progress = plan.items.length + completed ? Math.round(completed / (plan.items.length + completed) * 100) : 0
   const dueWords = data.words.filter(word => word.status === 'learning' && (!word.nextReviewAt || word.nextReviewAt <= today)).length
   const dueMistakes = data.mistakes.filter(mistake => !mistake.mastered && (!mistake.nextReviewAt || mistake.nextReviewAt <= today)).length

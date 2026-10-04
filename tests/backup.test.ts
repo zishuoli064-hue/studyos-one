@@ -3,7 +3,7 @@ import { exportBackup, importBackup } from '../src/domain/backup'
 import type { Snapshot } from '../src/domain/types'
 
 const empty: Snapshot = { subjects: [], tasks: [], exams: [], words: [], lists: [], mistakes: [],
-  topics: [], sessions: [], quizResults: [], notes: [], settings: null }
+  topics: [], sessions: [], quizResults: [], notes: [], plans: [], settings: null }
 
 describe('backup', () => {
   it('round trips the complete snapshot', () => {
@@ -16,5 +16,11 @@ describe('backup', () => {
     const previous: Snapshot = { ...empty, notes: [{ id: 'a', text: 'keep', createdAt: '2026-10-03' }] }
     const incoming: Snapshot = { ...empty, notes: [{ id: 'b', text: 'add', createdAt: '2026-10-03' }] }
     expect(importBackup(exportBackup(incoming), previous, 'merge').notes.map(n => n.id)).toEqual(['a', 'b'])
+  })
+
+  it('accepts older backups without daily plan snapshots', () => {
+    const old = JSON.parse(exportBackup(empty)) as { data: Record<string, unknown> }
+    delete old.data.plans
+    expect(importBackup(JSON.stringify(old), empty, 'replace').plans).toEqual([])
   })
 })

@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { AppSettings, Exam, Mistake, Note, QuizResult, Snapshot, StudySession, Subject, Task, Topic, Word, WordList } from '../domain/types'
+import type { AppSettings, DailyPlan, Exam, Mistake, Note, QuizResult, Snapshot, StudySession, Subject, Task, Topic, Word, WordList } from '../domain/types'
 import { demoSnapshot } from './demo'
 
 export class StudyStore extends Dexie {
@@ -13,6 +13,7 @@ export class StudyStore extends Dexie {
   sessions!: Table<StudySession, string>
   quizResults!: Table<QuizResult, string>
   notes!: Table<Note, string>
+  plans!: Table<DailyPlan, string>
   settings!: Table<AppSettings, string>
 
   constructor(name = 'StudyOS-ONE') {
@@ -24,19 +25,20 @@ export class StudyStore extends Dexie {
       topics: 'id, subjectId, nextReviewAt', sessions: 'id, subjectId, createdAt, kind',
       quizResults: 'id, listId, wordId, createdAt', notes: 'id, createdAt', settings: 'id',
     })
+    this.version(2).stores({ plans: 'id, savedAt' })
   }
 }
 
 export const db = new StudyStore()
-const TABLES = ['subjects', 'tasks', 'exams', 'words', 'lists', 'mistakes', 'topics', 'sessions', 'quizResults', 'notes'] as const
+const TABLES = ['subjects', 'tasks', 'exams', 'words', 'lists', 'mistakes', 'topics', 'sessions', 'quizResults', 'notes', 'plans'] as const
 
 export async function readSnapshot(store: StudyStore = db): Promise<Snapshot> {
-  const [subjects, tasks, exams, words, lists, mistakes, topics, sessions, quizResults, notes, settings] = await Promise.all([
+  const [subjects, tasks, exams, words, lists, mistakes, topics, sessions, quizResults, notes, plans, settings] = await Promise.all([
     store.subjects.toArray(), store.tasks.toArray(), store.exams.toArray(), store.words.toArray(), store.lists.toArray(),
     store.mistakes.toArray(), store.topics.toArray(), store.sessions.toArray(), store.quizResults.toArray(),
-    store.notes.toArray(), store.settings.get('main'),
+    store.notes.toArray(), store.plans.toArray(), store.settings.get('main'),
   ])
-  return { subjects, tasks, exams, words, lists, mistakes, topics, sessions, quizResults, notes, settings: settings ?? null }
+  return { subjects, tasks, exams, words, lists, mistakes, topics, sessions, quizResults, notes, plans, settings: settings ?? null }
 }
 
 export async function replaceSnapshot(store: StudyStore, snapshot: Snapshot): Promise<void> {
@@ -66,5 +68,7 @@ export async function seedDemo(store: StudyStore, settings: AppSettings): Promis
 export async function clearDemoData(store: StudyStore = db): Promise<void> {
   await store.transaction('rw', store.tables, async () => {
     for (const name of TABLES) await store[name].where('id').startsWith('demo-').delete()
+    const plans = await store.plans.toArray()
+    await store.plans.bulkPut(plans.map(plan => ({ ...plan, taskIds: plan.taskIds.filter(id => !id.startsWith('demo-')) })))
   })
 }

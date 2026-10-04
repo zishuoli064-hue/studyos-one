@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, BookOpen, Plus, Trash2, Pencil, Undo2 } from 'lucide-react'
-import type { Exam, Snapshot, Subject, SubjectKind, Task } from '../../domain/types'
+import type { Exam, Note, Snapshot, Subject, SubjectKind, Task } from '../../domain/types'
 import { db } from '../../storage/db'
 import { deleteSubject, restoreSubject } from '../../storage/actions'
 import { useApp } from '../../app/context'
@@ -8,7 +8,7 @@ import { confirmDelete, duration } from '../../app/utils'
 import { VocabularyView } from './VocabularyView'
 import { MathView } from './MathView'
 
-type Tab = 'overview' | 'vocabulary' | 'inbox' | 'topics' | 'mistakes' | 'tasks' | 'exams'
+type Tab = 'overview' | 'vocabulary' | 'inbox' | 'topics' | 'mistakes' | 'tasks' | 'exams' | 'notes'
 const SUBJECT_KINDS: SubjectKind[] = ['english', 'german', 'math', 'course', 'project', 'custom']
 
 export function LearnPage() {
@@ -48,7 +48,7 @@ export function LearnPage() {
     { id: 'overview', label: 'Overview' },
     ...(selected.kind === 'english' || selected.kind === 'german' ? [{ id: 'vocabulary' as Tab, label: 'Vocabulary' }, { id: 'inbox' as Tab, label: 'Inbox' }] : []),
     ...(selected.kind === 'math' || selected.kind === 'course' ? [{ id: 'topics' as Tab, label: 'Topics' }, { id: 'mistakes' as Tab, label: 'Mistakes' }] : []),
-    { id: 'tasks', label: 'Tasks' }, { id: 'exams', label: 'Exams' },
+    { id: 'tasks', label: 'Tasks' }, { id: 'exams', label: 'Exams' }, { id: 'notes', label: 'Notes' },
   ] : []
   return <div className="learn-page"><div className="page-intro"><div className="eyebrow">YOUR LEARNING SPACE</div>
     <h1>Learn.</h1><p>Pick up where you left off. Nothing here depends on a streak.</p></div>
@@ -84,12 +84,23 @@ export function LearnPage() {
           {(tab === 'topics' || tab === 'mistakes') && <MathView subject={selected} view={tab}/>}
           {tab === 'tasks' && <TaskPanel subject={selected} tasks={data.tasks.filter(task => task.subjectId === selected.id)} onStart={startFocus}/>}
           {tab === 'exams' && <ExamPanel subject={selected} exams={data.exams.filter(exam => exam.subjectId === selected.id)}/>}
+          {tab === 'notes' && <NotesPanel notes={data.notes}/>}
           <div className="subject-footer"><button className="text-link" onClick={() => reorderSubject(selected, -1)}>Move up</button>
             <button className="text-link" onClick={() => reorderSubject(selected, 1)}>Move down</button></div>
         </>}
         {undo && <div className="undo-bar">Subject removed <button onClick={() => void run(async () => { await restoreSubject(db, undo); setSelectedId(undo.subjects?.[0]?.id ?? null); setUndo(null) }, 'Restored')}><Undo2 size={16}/> Undo</button></div>}
       </div></div>
   </div>
+}
+
+function NotesPanel({ notes }: { notes: Note[] }) {
+  const { run, openCapture } = useApp()
+  return <section className="stack"><div className="row between"><h3>Notes</h3><button className="button-quiet" onClick={openCapture}><Plus size={16}/> Capture note</button></div>
+    {!notes.length && <div className="empty-state small"><p>Keep a thought here and return to learning.</p></div>}
+    {[...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(note => <div className="list-card" key={note.id}>
+      <div><strong>{note.text.split('\n')[0]}</strong>{note.text.includes('\n') && <small>{note.text.split('\n').slice(1).join(' ')}</small>}
+        <small>{new Date(note.createdAt).toLocaleDateString()}</small></div>
+      <button className="icon-button danger" aria-label={`Delete note ${note.text.split('\n')[0]}`} onClick={() => confirmDelete('this note') && void run(() => db.notes.delete(note.id), 'Note deleted')}><Trash2 size={16}/></button></div>)}</section>
 }
 
 function Overview({ subject, data, onTab }: { subject: Subject; data: Snapshot; onTab: (tab: Tab) => void }) {

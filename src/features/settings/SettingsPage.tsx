@@ -5,6 +5,7 @@ import { exportBackup, importBackup } from '../../domain/backup'
 import { mergeVocabulary, previewVocabularyCsv, VOCABULARY_CSV_TEMPLATE, type DuplicateStrategy } from '../../domain/import'
 import { DEFAULT_SETTINGS, type AppSettings, type Snapshot } from '../../domain/types'
 import { clearDemoData, db, replaceSnapshot } from '../../storage/db'
+import { localDay } from '../../domain/date'
 
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }))
@@ -33,7 +34,7 @@ export function SettingsPage() {
   const [advanced, setAdvanced] = useState(false)
 
   const update = (changes: Partial<AppSettings>) => void run(() => db.settings.put({ ...settings, ...changes }))
-  const exportAll = () => download(`studyos-backup-${new Date().toISOString().slice(0, 10)}.json`, exportBackup(data), 'application/json')
+  const exportAll = () => download(`studyos-backup-${localDay()}.json`, exportBackup(data), 'application/json')
   const restore = () => void run(async () => {
     if (!backupText) throw new Error('Choose a backup file first')
     const restored = importBackup(backupText, data, backupMode)
@@ -61,7 +62,7 @@ export function SettingsPage() {
   const reset = () => void run(async () => {
     if (!window.confirm('Delete all StudyOS data on this device? Export a backup first.')) return
     setLastReset(data)
-    await replaceSnapshot(db, { subjects: [], tasks: [], exams: [], words: [], lists: [], mistakes: [], topics: [], sessions: [], quizResults: [], notes: [], settings })
+    await replaceSnapshot(db, { subjects: [], tasks: [], exams: [], words: [], lists: [], mistakes: [], topics: [], sessions: [], quizResults: [], notes: [], plans: [], settings })
   }, 'Local data reset')
   const updateWeight = (key: keyof NonNullable<AppSettings['priorityWeights']>, value: number) => {
     const weights = { ...DEFAULT_SETTINGS.priorityWeights!, ...settings.priorityWeights, [key]: value }

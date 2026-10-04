@@ -23,8 +23,11 @@ export function scoreTask(task: Task, exams: Exam[], today: string, recentMinute
   const deadlineDays = task.deadline ? daysBetween(today, task.deadline) : 999
   const deadline = task.deadline ? clamp(deadlineDays < 0 ? 100 : 100 - Math.min(deadlineDays, 30) * 3) : 25
   const continuity = clamp(70 - Math.min(recentMinutes, 240) / 4)
-  const w = weights ?? WEIGHTS
-  const totalWeight = Object.values(w).reduce((sum, weight) => sum + Math.max(0, weight), 0) || 100
+  const configured = weights ?? WEIGHTS
+  const safe = (value: number) => Number.isFinite(value) ? Math.max(0, value) : 0
+  const w = { exam: safe(configured.exam), importance: safe(configured.importance), weakness: safe(configured.weakness),
+    review: safe(configured.review), deadline: safe(configured.deadline), continuity: safe(configured.continuity) }
+  const totalWeight = Object.values(w).reduce((sum, weight) => sum + weight, 0) || 1
   const score = Math.round(((exam * w.exam + importance * w.importance + weakness * w.weakness +
     review * w.review + deadline * w.deadline + continuity * w.continuity) / totalWeight) * 10) / 10
   const reasons: string[] = []

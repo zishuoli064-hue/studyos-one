@@ -40,4 +40,11 @@ describe('vocabulary', () => {
     expect(mergeVocabulary([{ ...word(2), word: 'ability' }], preview.valid, 'skip').length).toBe(2)
     expect(mergeVocabulary([{ ...word(2), word: 'ability' }], preview.valid, 'replace').find(w => w.word === 'ability')?.meaning).toBe('能力')
   })
+
+  it('keeps the same spelling in separate subjects independent', () => {
+    const existing = [{ ...word(1), word: 'ability', subjectId: 'english-a' }]
+    const incoming = previewVocabularyCsv('Word,Meaning\nability,能力', existing, 'english-b').valid
+    expect(mergeVocabulary(existing, incoming, 'skip')).toHaveLength(2)
+    expect(incoming[0].subjectId).toBe('english-b')
+  })
 })

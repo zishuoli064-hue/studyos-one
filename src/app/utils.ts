@@ -1,6 +1,4 @@
-export function localDay(date = new Date()): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
+export { localDay } from '../domain/date'
 
 export function duration(minutes: number): string {
   const value = Math.max(0, Math.round(minutes))

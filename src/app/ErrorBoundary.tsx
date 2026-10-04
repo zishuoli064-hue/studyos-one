@@ -1,5 +1,4 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { exportBackup } from '../domain/backup'
 import { readSnapshot } from '../storage/db'
 import { downloadFile, localDay } from './utils'
 
@@ -18,7 +17,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
         <button onClick={() => this.setState({ error: null })}>Try again</button>
         <button onClick={() => location.reload()}>Reload app</button>
         <button onClick={async () => {
-          try { downloadFile(`studyos_backup_${localDay()}.json`, exportBackup(await readSnapshot()), 'application/json') }
+          try { const { exportBackup } = await import('../domain/backup')
+            downloadFile(`studyos_backup_${localDay()}.json`, exportBackup(await readSnapshot()), 'application/json') }
           catch { alert('Backup is unavailable while storage cannot be opened.') }
         }}>Export backup</button>
       </div>

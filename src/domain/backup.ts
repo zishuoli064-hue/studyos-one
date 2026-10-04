@@ -25,6 +25,7 @@ const session = z.object({ id, subjectId: id, minutes: z.number(),
 const quizResult = z.object({ id, listId: id, wordId: id,
   kind: z.enum(['spelling', 'meaning', 'context', 'network']), correct: z.boolean(), createdAt: date }).passthrough()
 const note = z.object({ id, text: z.string(), createdAt: date }).passthrough()
+const plan = z.object({ id, taskIds: z.array(id), plannedMinutes: z.number(), savedAt: date }).passthrough()
 const settings = z.object({ id: z.literal('main'), onboardingDone: z.boolean(), dailyMinutes: z.number(),
   wordsPerList: z.number(), theme: z.enum(['light', 'dark', 'system']), fontScale: z.number(),
   showIPA: z.boolean(), showExampleCN: z.boolean(), defaultTimer: z.union([z.literal(0), z.literal(25), z.literal(50), z.literal(90)]),
@@ -35,10 +36,10 @@ const settings = z.object({ id: z.literal('main'), onboardingDone: z.boolean(), 
 const snapshotSchema = z.object({
   subjects: z.array(subject), tasks: z.array(task), exams: z.array(exam), words: z.array(word),
   lists: z.array(list), mistakes: z.array(mistake), topics: z.array(topic), sessions: z.array(session),
-  quizResults: z.array(quizResult), notes: z.array(note), settings: settings.nullable(),
+  quizResults: z.array(quizResult), notes: z.array(note), plans: z.array(plan).default([]), settings: settings.nullable(),
 })
 const backupSchema = z.object({ version: z.literal(1), data: snapshotSchema })
-const TABLES = ['subjects', 'tasks', 'exams', 'words', 'lists', 'mistakes', 'topics', 'sessions', 'quizResults', 'notes'] as const
+const TABLES = ['subjects', 'tasks', 'exams', 'words', 'lists', 'mistakes', 'topics', 'sessions', 'quizResults', 'notes', 'plans'] as const
 
 export function exportBackup(data: Snapshot): string {
   return JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), data }, null, 2)

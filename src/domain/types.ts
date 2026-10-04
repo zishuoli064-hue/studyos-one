@@ -57,6 +57,7 @@ export interface QuizResult {
 }
 
 export interface Note { id: string; text: string; createdAt: string }
+export interface DailyPlan { id: string; taskIds: string[]; plannedMinutes: number; savedAt: string }
 
 export interface AppSettings {
   id: 'main'; onboardingDone: boolean; dailyMinutes: number; wordsPerList: number
@@ -69,7 +70,7 @@ export interface AppSettings {
 export interface Snapshot {
   subjects: Subject[]; tasks: Task[]; exams: Exam[]; words: Word[]; lists: WordList[]
   mistakes: Mistake[]; topics: Topic[]; sessions: StudySession[]; quizResults: QuizResult[]
-  notes: Note[]; settings: AppSettings | null
+  notes: Note[]; plans: DailyPlan[]; settings: AppSettings | null
 }
 
 export interface PlanItem { taskId: string; minutes: number; score: number; reasons: string[] }

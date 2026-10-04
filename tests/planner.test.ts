@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planToday } from '../src/domain/planner'
+import { planToday, scoreTask } from '../src/domain/planner'
 import type { Task, Exam } from '../src/domain/types'
 
 const day = '2026-10-03'
@@ -36,5 +36,15 @@ describe('daily planner', () => {
   it('returns an empty plan without tasks or available time', () => {
     expect(planToday({ tasks: [], exams: [], availableMinutes: 120, today: day }).items).toEqual([])
     expect(planToday({ tasks: [task('a')], exams: [], availableMinutes: 0, today: day }).items).toEqual([])
+  })
+
+  it('keeps scores in range with unusual user weights and dates', () => {
+    const weights = { exam: -5, importance: Number.NaN, weakness: 500, review: 0, deadline: 0, continuity: 0 }
+    for (const item of [task('no-date'), task('old', { deadline: '2020-01-01' }), task('weak', { mastery: 0, importance: 5 })]) {
+      const score = scoreTask(item, [], day, 0, weights).score
+      expect(Number.isFinite(score)).toBe(true)
+      expect(score).toBeGreaterThanOrEqual(0)
+      expect(score).toBeLessThanOrEqual(100)
+    }
   })
 })
